@@ -4,7 +4,7 @@ mod parser;
 
 fn main() {
     let pid = process::id(); // PID (Process ID) is a unique number given to each process on an OS.
-    let vars: Vec<(String, String)> = std::env::vars().into_iter().collect(); // Environment variables
+    // let vars: Vec<(String, String)> = std::env::vars().into_iter().collect(); // Environment variables
 
     let path = match std::env::var("PATH") {
         Ok(path) => path,
@@ -21,7 +21,8 @@ fn main() {
 
         match parser::parse_command(&path, input) {
             Ok(()) => (),
-            Err(_) => println!("There was an error"),
+            Err(parser::ParseError::InvalidCommandStructure) => println!("river-shell: parsing error"),
+            Err(parser::ParseError::BinaryNotFound(command)) => println!("the binary for {} was not found", command),
         }
     }
 }
