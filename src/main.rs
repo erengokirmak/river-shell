@@ -1,28 +1,42 @@
-use std::io::Write;
-use std::process;
+use colored::Colorize;
+use std::io::{stdout, Write};
+
+use crate::parser::parse_command;
+
+mod execute;
 mod parser;
 
 fn main() {
-    let pid = process::id(); // PID (Process ID) is a unique number given to each process on an OS.
-    // let vars: Vec<(String, String)> = std::env::vars().into_iter().collect(); // Environment variables
-
-    let path = match std::env::var("PATH") {
-        Ok(path) => path,
-        Err(_) => "".to_string(),
-    };
-    println!("PID: {}\n", pid);
-
+    println!("Welcome to river-shell!\n");
+    println!("Started shell with process ID: {}", std::process::id());
     loop {
+        print!(
+            "{}$ ",
+            std::env::current_dir()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .truecolor(0, 250, 217)
+        );
+        let _ = stdout().flush();
         let mut input = String::new();
-        print!("{}$ ", std::env::current_dir().unwrap().to_str().unwrap());
-        let _ = std::io::stdout().flush();
-        let _ = std::io::stdin().read_line(&mut input);
-        let input = input.trim(); // Get rid of whitespace
+        match std::io::stdin().read_line(&mut input) {
+            Ok(_) => (),
+            Err(err) => {
+                println!("river-shell: {}", err);
+                input = "".to_string();
+            }
+        }
 
-        match parser::parse_command(&path, input) {
-            Ok(()) => (),
-            Err(parser::ParseError::InvalidCommandStructure) => println!("river-shell: parsing error"),
-            Err(parser::ParseError::BinaryNotFound(command)) => println!("the binary for {} was not found", command),
+        match parse_command(&input) {
+            Ok(parsed_command) => {
+                if let Err(err) = execute::execute_command(parsed_command) {
+                    println!("river-shell: {}", err);
+                }
+            }
+            Err(parser::ParseError::InvalidCommandStructure) => {
+                eprintln!("river-shell: command has invalid structure")
+            }
         }
     }
 }
