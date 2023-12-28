@@ -1,6 +1,17 @@
 # River-Shell
 
-My very limited implementation of a linux shell in Rust.
+A limited implementation of a linux shell written in Rust.
+
+### Currently supports:
+- Standard linux commands such as `ls` and `cd`,
+- Running binaries that are in the current directory / in the PATH,
+- Piping,
+
+# Usage
+1. Clone this repository to your machine.
+2. Go to the directory where the directory was cloned,
+3. Use `cargo run` to run the shell or `cargo test` to check if the current shell passes the automated tests.  
+4. Use `q` or `exit` when inside the shell to quit it.  
 
 # Goals
 My primary goals for the project are as such:
