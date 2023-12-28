@@ -6,7 +6,7 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ExecutionError {
     BinaryNotFound(String),
     ProcessErrorFound,
@@ -21,23 +21,25 @@ impl Display for ExecutionError {
     }
 }
 
-pub fn execute_command(command: std::str::Split<'_, &str>) -> Result<(), ExecutionError> {
-    let mut peekable_commands = command.peekable();
+/// Executes a command given as a string.
+pub fn execute_command(command: &str)-> Result<(), ExecutionError> {
+    let mut commands = command.split("|").peekable();
     let mut previous_command: Option<Child> = None;
-    while let Some(command) = peekable_commands.next() {
+    while let Some(command) = commands.next() {
         let mut args = command.trim().split(' ');
         let binary = args.next().unwrap().trim();
 
-        if binary == "exit" || binary == "q" {
-            std::process::exit(0);
-        } else if binary == "cd" {
-            let _ = match args.next() {
-                Some(dir) => std::env::set_current_dir(dir),
-                None => std::env::set_current_dir("/"),
-            };
-            return Ok(());
-        } else if binary == "" {
-            return Ok(());
+        // Built-in commands
+        match binary {
+            "exit" | "q" => std::process::exit(0),
+            "cd" => {
+                let _ = match args.next() {
+                    Some(dir) => std::env::set_current_dir(dir),
+                    None => std::env::set_current_dir("/"),
+                };
+            }
+            "" => return Ok(()),
+            _ => (),
         }
 
         let binary_path: PathBuf = match find_binary(binary) {
@@ -45,12 +47,13 @@ pub fn execute_command(command: std::str::Split<'_, &str>) -> Result<(), Executi
             Err(err) => return Err(err),
         };
 
-        let stdout = if peekable_commands.peek().is_none() {
-            Stdio::inherit()
-        } else {
-            Stdio::piped()
+        // 
+        let stdout = match commands.peek() {
+            Some(_) => Stdio::piped(),
+            None => Stdio::inherit(),
         };
 
+        // Specifying the input based on 
         let stdin = previous_command.map_or(Stdio::inherit(), |output: Child| {
             Stdio::from(output.stdout.unwrap())
         });
@@ -60,17 +63,21 @@ pub fn execute_command(command: std::str::Split<'_, &str>) -> Result<(), Executi
             .stdout(stdout)
             .stdin(stdin)
             .spawn();
+
         match output {
             Ok(output) => previous_command = Some(output),
             Err(_) => return Err(ExecutionError::ProcessErrorFound),
         }
     }
+
     if let Some(mut final_command) = previous_command {
         let _ = final_command.wait();
     }
     Ok(())
 }
 
+/// Searches the current directory and the PATH variable
+/// and finds a binary matching with the given name
 pub fn find_binary(binary_name: &str) -> Result<PathBuf, ExecutionError> {
     fn is_valid_binary(path: &Path) -> bool {
         !path.is_symlink() && path.is_file() && !path.is_dir()
@@ -98,12 +105,23 @@ pub fn find_binary(binary_name: &str) -> Result<PathBuf, ExecutionError> {
 
 #[cfg(test)]
 mod tests {
+    use crate::execute::{execute_command, find_binary};
     use std::path::PathBuf;
 
-    use crate::execute::find_binary;
-
+    /// If the test is run on a linux system, this is expected behavior
     #[test]
     fn finding_binaries_work() {
         assert_eq!(PathBuf::from("/bin/ls"), find_binary("ls").unwrap());
+    }
+
+    #[test]
+    fn empty_command_returns_ok() {
+        assert_eq!(Ok(()), execute_command(""));
+    }
+
+    #[test]
+    fn changing_directories_works() {
+        let _ = execute_command("cd");
+        assert_eq!(std::env::current_dir().unwrap(), PathBuf::from("/"));
     }
 }

@@ -1,14 +1,15 @@
 /// Describes the ways a parse attempt may fail
+#[derive(Debug, PartialEq, Eq)]
 pub enum ParseError {
     InvalidCommandStructure,
 }
 /// Parses a command. Each element of the Split will be a command. If there are multiple elements,
 /// the output of the earlier commands are fed into the later commands.
-pub fn parse_command(command: &str) -> Result<std::str::Split<'_, &str>, ParseError> {
+pub fn parse_command(command: &str) -> Result<&str, ParseError> {
     if !is_valid_command(command) {
         Err(ParseError::InvalidCommandStructure)
     } else {
-        Ok(command.trim().split("|"))
+        Ok(command.trim())
     }
 }
 
