@@ -13,6 +13,15 @@ pub fn parse_command(command: &str) -> Result<&str, ParseError> {
     }
 }
 
+
+#[derive(PartialEq, Eq)]
+enum ParserState {
+    Start,
+    Command, // Parser must end on this if there is no '>'
+    Pipe,
+    Output, // Parser must end on this if there is a '>'
+}
+
 /// Checks if a given command is partially valid.
 /// Partially valid is defined such that:
 /// - The piping of commands is valid (the command doesn't start or end with a pipe).
@@ -28,6 +37,8 @@ pub fn parse_command(command: &str) -> Result<&str, ParseError> {
 ///
 /// let command = "ls | cat | | grep word";
 /// assert_eq!(false, is_valid_command(command)); // returns false as there is a pipe that is not valid
+/// 
+/// let command = "ls | cat | >"
 /// ```
 fn is_valid_command(command: &str) -> bool {
     // If there is not a pipe, the command can only fail if the binary is not found or the
@@ -44,6 +55,30 @@ fn is_valid_command(command: &str) -> bool {
     }
 
     true
+}
+
+fn is_valid_command2(command: &str) -> bool {
+    if !command.contains('|') && !command.contains('>') {
+        return true;
+    }
+
+    let mut state = ParserState::Start;
+
+    let commands = command.split('|');
+    
+    for cmd in commands {
+        use ParserState as PS;
+        match (cmd.trim(), state) {
+            ("", PS::Start) => return true,
+            (">", PS::Start) => return false,
+            (_, PS::Start) => state = PS::Command,
+            ("|", PS::Command) => state = PS::Pipe,
+            (">", PS::Command) => state = PS::Output,
+            (_, PS::Command) => state
+        }
+    }
+
+    return !(state == ParserState::Start || state == ParserState::Pipe || state == ParserState::Output);
 }
 
 #[cfg(test)]
