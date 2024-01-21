@@ -1,7 +1,7 @@
 use colored::Colorize;
 use std::io::{stdout, Write};
 
-use crate::parser::parse_command;
+use parser::parse_command;
 
 mod execute;
 mod parser;
@@ -13,9 +13,9 @@ fn main() {
         print!(
             "{}$ ",
             std::env::current_dir()
-                .unwrap()
+                .expect("Current directory should be reachable")
                 .to_str()
-                .unwrap()
+                .expect("Current directory should be convertable to a string slice")
                 .truecolor(0, 250, 217)
         );
         let _ = stdout().flush();

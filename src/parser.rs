@@ -53,7 +53,7 @@ mod tests {
     fn command_validation_works() {
         use crate::parser::is_valid_command;
 
-        let command = "sudo cd | cat | grep word";
+        let command = "sudo cd | cat | grep word";
         assert_eq!(true, is_valid_command(command));
 
         let command = "ls | cat";

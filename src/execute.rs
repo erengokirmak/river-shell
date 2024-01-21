@@ -27,7 +27,9 @@ pub fn execute_command(command: &str)-> Result<(), ExecutionError> {
     let mut previous_command: Option<Child> = None;
     while let Some(command) = commands.next() {
         let mut args = command.trim().split(' ');
-        let binary = args.next().unwrap().trim();
+        let binary = args.next()
+                        .expect("the args iterator should have at least one item")
+                        .trim();
 
         // Built-in commands
         match binary {
@@ -55,7 +57,7 @@ pub fn execute_command(command: &str)-> Result<(), ExecutionError> {
 
         // Specifying the input based on 
         let stdin = previous_command.map_or(Stdio::inherit(), |output: Child| {
-            Stdio::from(output.stdout.unwrap())
+            Stdio::from(output.stdout.expect("standard output should be reachable"))
         });
 
         let output = Command::new(binary_path)
@@ -87,7 +89,7 @@ pub fn find_binary(binary_name: &str) -> Result<PathBuf, ExecutionError> {
         Err(_) => "".to_string(),
     };
 
-    let mut first_candidate = env::current_dir().unwrap();
+    let mut first_candidate = env::current_dir().expect("current directory should be reachable");
     first_candidate.push(binary_name);
 
     if is_valid_binary(&first_candidate) {
@@ -111,7 +113,7 @@ mod tests {
     /// If the test is run on a linux system, this is expected behavior
     #[test]
     fn finding_binaries_work() {
-        assert_eq!(PathBuf::from("/bin/ls"), find_binary("ls").unwrap());
+        assert_eq!(PathBuf::from("/bin/ls"), find_binary("ls").expect("hardcoded binary should be findable"));
     }
 
     #[test]
@@ -122,6 +124,6 @@ mod tests {
     #[test]
     fn changing_directories_works() {
         let _ = execute_command("cd");
-        assert_eq!(std::env::current_dir().unwrap(), PathBuf::from("/"));
+        assert_eq!(std::env::current_dir().expect("current directory should be reachable"), PathBuf::from("/"));
     }
 }
